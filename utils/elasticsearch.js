@@ -2,30 +2,64 @@ const { Client } = require('@elastic/elasticsearch');
 const { logger } = require('./logger');
 require('dotenv').config();
 
-const elasticUrl = process.env.ELASTIC_URL || 'http://localhost:9200';
-const EsClient = new Client({ node: elasticUrl });
-const index = 'products';
-const type = 'products';
+const {
+  ELASTICSEARCH_URL,
+  ELASTICSEARCH_USERNAME,
+  ELASTICSEARCH_PASSWORD,
+} = process.env;
+
+const elasticUrl = ELASTICSEARCH_URL || 'http://localhost:9200';
+const EsClient = new Client({
+  node: elasticUrl,
+  // auth: {
+  //   username: ELASTICSEARCH_USERNAME,
+  //   password: ELASTICSEARCH_PASSWORD,
+  // },
+});
+
+const indexDefault = 'products';
+const typeDefault = 'products';
 /**
  * @function createIndex
  * @returns {void}
  * @description Creates an index in ElasticSearch.
  */
-async function createIndex(index) {
+
+const createIndex = async index => {
   try {
     await EsClient.indices.create({ index });
     logger.info(`Created index ${index}`);
   } catch (err) {
-    logger.info(`An error occurred while creating the index ${index}:`);
-    logger.info(err);
+    logger.error(`An error occurred while creating the index ${index}:`);
+    logger.error(err);
   }
-}
+};
+/**
+ * @function searchDocument
+ * @param {*} query
+ * @returns data document
+ */
+const searchDocument = query => {
+  return EsClient.search(query);
+};
+
+/**
+ * @function putMapping
+ * @param {*} option
+ */
+const putMapping = option => {
+  return EsClient.indices.putMapping(option);
+};
+
+const getMapping = option => {
+  return EsClient.indices.getMapping(option);
+};
 /**
  * @function setProductsMapping,
  * @returns {void}
  * @description Sets the products mapping to the database.
  */
-async function setProductsMapping() {
+const setProductsMapping = async () => {
   try {
     const schema = {
       description: {
@@ -44,13 +78,13 @@ async function setProductsMapping() {
         type: 'float',
       },
       is_active: {
-        type: 'bool',
+        type: 'boolean',
       },
     };
 
-    await EsClient.indices.putMapping({
-      index,
-      type,
+    await putMapping({
+      index: indexDefault,
+      type: typeDefault,
       include_type_name: true,
       body: {
         properties: schema,
@@ -62,13 +96,13 @@ async function setProductsMapping() {
     logger.info('An error occurred while setting the products mapping:');
     logger.info(err);
   }
-}
+};
 /**
  * @function checkConnection
  * @returns {Promise<Boolean>}
  * @description Checks if the client is connected to ElasticSearch
  */
-function checkConnection() {
+const checkConnection = () => {
   return new Promise(async resolve => {
     logger.info('Checking connection to ElasticSearch...');
     let isConnected = false;
@@ -82,30 +116,27 @@ function checkConnection() {
     }
     resolve(true);
   });
-}
+};
 
-async function connect() {
+const connect = async () => {
   const isElasticReady = await checkConnection();
 
   if (isElasticReady) {
     const elasticIndex = await EsClient.indices.exists({
-      index,
+      index: indexDefault,
     });
 
     if (!elasticIndex.body) {
-      await createIndex(index);
+      await createIndex(indexDefault);
       await setProductsMapping();
-      // await data.populateDatabase();
     }
   }
-}
+};
 
 module.exports = {
-  EsClient,
-  setProductsMapping,
-  checkConnection,
   createIndex,
-  index,
-  type,
+  searchDocument,
   connect,
+  getMapping,
+  EsClient,
 };

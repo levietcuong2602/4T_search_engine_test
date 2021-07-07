@@ -1,15 +1,14 @@
-FROM node:10.15.3-alpine
+FROM node:12.19.0
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
 COPY package*.json ./
 
 RUN npm install
-RUN npm install -g pm2
+RUN npm install -g pm2 && npm install -g nodemon
 
-COPY . ./
+COPY . .
 
 EXPOSE 3000
-EXPOSE 9200
 
-CMD npm run dev
+CMD ["npm", "run",  "dev"]

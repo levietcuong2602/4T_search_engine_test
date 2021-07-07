@@ -1,29 +1,31 @@
-const { EsClient } = require('../utils/elasticsearch');
+const { searchDocument, EsClient: Client } = require('../utils/elasticsearch');
 const { logger } = require('../utils/logger');
 
-const getProduct = async ({ limit = 10, offsets = 0, inputText = '' }) => {
+const getProduct = async ({ limit = 10, offsets = 0, inputText }) => {
   const query = {
     query: {
-      match: {
-        name: inputText,
+      multi_match: {
+        query: inputText,
+        fields: ['name', 'title', 'description'],
       },
     },
   };
 
-  const {
-    body: { hits },
-  } = await EsClient.search({
+  const result = await searchDocument({
     from: offsets || 0,
     size: limit || 100,
     index: 'products',
-    sort: { price: { order: 'asc' } },
     body: query,
   });
+  const {
+    body: { hits },
+  } = result;
 
   const total = hits.total.value;
   const data = hits.hits.map(hit => {
     return {
       id: hit._id,
+      _score: hit._score,
       ...hit._source,
     };
   });
@@ -34,4 +36,12 @@ const getProduct = async ({ limit = 10, offsets = 0, inputText = '' }) => {
   };
 };
 
-module.exports = { getProduct };
+const getMapping = async () => {
+  const result = await Client.indices.getMapping({
+    index: 'products',
+  });
+
+  return result;
+};
+
+module.exports = { getProduct, getMapping };
