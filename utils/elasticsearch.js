@@ -1,4 +1,4 @@
-const { Client } = require('@elastic/elasticsearch');
+const elasticsearch = require('@elastic/elasticsearch');
 const { logger } = require('./logger');
 require('dotenv').config();
 
@@ -8,9 +8,8 @@ const {
   ELASTICSEARCH_PASSWORD,
 } = process.env;
 
-const elasticUrl = ELASTICSEARCH_URL || 'http://localhost:9200';
-const EsClient = new Client({
-  node: elasticUrl,
+const client = new elasticsearch.Client({
+  node: ELASTICSEARCH_URL || 'http://localhost:9200',
   // auth: {
   //   username: ELASTICSEARCH_USERNAME,
   //   password: ELASTICSEARCH_PASSWORD,
@@ -27,7 +26,7 @@ const typeDefault = 'products';
 
 const createIndex = async index => {
   try {
-    await EsClient.indices.create({ index });
+    await client.indices.create({ index });
     logger.info(`Created index ${index}`);
   } catch (err) {
     logger.error(`An error occurred while creating the index ${index}:`);
@@ -40,7 +39,7 @@ const createIndex = async index => {
  * @returns data document
  */
 const searchDocument = query => {
-  return EsClient.search(query);
+  return client.search(query);
 };
 
 /**
@@ -48,11 +47,11 @@ const searchDocument = query => {
  * @param {*} option
  */
 const putMapping = option => {
-  return EsClient.indices.putMapping(option);
+  return client.indices.putMapping(option);
 };
 
 const getMapping = option => {
-  return EsClient.indices.getMapping(option);
+  return client.indices.getMapping(option);
 };
 /**
  * @function setProductsMapping,
@@ -108,7 +107,7 @@ const checkConnection = () => {
     let isConnected = false;
     while (!isConnected) {
       try {
-        await EsClient.cluster.health({});
+        await client.cluster.health({});
         logger.info('Successfully connected to ElasticSearch');
         isConnected = true;
         // eslint-disable-next-line no-empty
@@ -122,7 +121,7 @@ const connect = async () => {
   const isElasticReady = await checkConnection();
 
   if (isElasticReady) {
-    const elasticIndex = await EsClient.indices.exists({
+    const elasticIndex = await client.indices.exists({
       index: indexDefault,
     });
 
@@ -138,5 +137,5 @@ module.exports = {
   searchDocument,
   connect,
   getMapping,
-  EsClient,
+  Client: client,
 };

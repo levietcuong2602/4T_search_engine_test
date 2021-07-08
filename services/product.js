@@ -1,4 +1,4 @@
-const { searchDocument, EsClient: Client } = require('../utils/elasticsearch');
+const { searchDocument, Client } = require('../utils/elasticsearch');
 const { logger } = require('../utils/logger');
 
 const getProduct = async ({ limit = 10, offsets = 0, inputText }) => {
