@@ -1,7 +1,7 @@
 const elasticsearch = require('../utils/elasticsearch');
 const { logger } = require('../utils/logger');
 
-const data = require('../data/mic_vbpl.json');
+const data = require('../test/json/mic_vbpl.json');
 
 const bulkIndex = async () => {
   const bulk = [];

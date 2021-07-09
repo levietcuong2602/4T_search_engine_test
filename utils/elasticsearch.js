@@ -10,10 +10,6 @@ const {
 
 const client = new elasticsearch.Client({
   node: ELASTICSEARCH_URL || 'http://localhost:9200',
-  // auth: {
-  //   username: ELASTICSEARCH_USERNAME,
-  //   password: ELASTICSEARCH_PASSWORD,
-  // },
 });
 /**
  * @function searchDocument

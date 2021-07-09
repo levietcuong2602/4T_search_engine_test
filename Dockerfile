@@ -2,9 +2,10 @@ FROM node:12.19.0
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json ./
 
-RUN npm install
+RUN npm i
+
 RUN npm install -g pm2 && npm install -g nodemon
 
 COPY . .
