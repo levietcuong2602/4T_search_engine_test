@@ -12,8 +12,8 @@ const camelcaseRequest = require('./middlewares/camelCaseRequest');
 const snakecaseResponse = require('./middlewares/snakeCaseResponse');
 
 require('dotenv').config();
-// require('./models');
-require('./utils/elasticsearch').connect();
+require('./utils/elasticsearch').connection();
+require('./models')(require('./utils/elasticsearch').Client);
 
 const app = express();
 

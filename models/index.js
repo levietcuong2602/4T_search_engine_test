@@ -1,34 +1,33 @@
-const mongoose = require('mongoose');
-require('mongoose-long')(mongoose);
+/* eslint-disable global-require */
+/* eslint-disable import/no-dynamic-require */
+module.exports = client => {
+  require('fs')
+    .readdirSync('./models')
+    .forEach(async fileName => {
+      if (fileName === 'index.js') return;
+      if (['js'].indexOf(fileName.split('.').pop()) === -1) return;
 
-const { MONGODB_URI } = process.env;
-
-mongoose.connect(MONGODB_URI, {
-  autoIndex: false,
-  useNewUrlParser: true,
-  useFindAndModify: false,
-  useCreateIndex: true,
-});
-
-mongoose.connection.on('error', err => {
-  console.error('MongoDB connection error.');
-  console.error(err);
-  process.exit();
-});
-
-mongoose.connection.once('open', () => {
-  console.log(`Connected to MongoDB: ${MONGODB_URI}`);
-});
-
-const Counter = require('../models/counter');
-
-(async () => {
-  const counters = ['test'];
-
-  await Promise.all(
-    counters.map(async counter => {
-      const existCounter = await Counter.findById(counter);
-      if (!existCounter) await Counter.create({ _id: counter, sequence: 0 });
-    }),
-  );
-})();
+      const index = fileName.split('.').shift();
+      try {
+        const elasticIndex = await client.indices.exists({
+          index,
+        });
+        if (!elasticIndex.body) {
+          console.log(`Created index ${index}`);
+          await client.indices.create({
+            index,
+            include_type_name: true,
+            type: index,
+          });
+        }
+        await client.indices.putMapping({
+          index,
+          type: index,
+          body: require(`./${fileName}`),
+          include_type_name: true,
+        });
+      } catch (err) {
+        console.log(err);
+      }
+    });
+};

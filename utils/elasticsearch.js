@@ -15,24 +15,6 @@ const client = new elasticsearch.Client({
   //   password: ELASTICSEARCH_PASSWORD,
   // },
 });
-
-const indexDefault = 'products';
-const typeDefault = 'products';
-/**
- * @function createIndex
- * @returns {void}
- * @description Creates an index in ElasticSearch.
- */
-
-const createIndex = async index => {
-  try {
-    await client.indices.create({ index });
-    logger.info(`Created index ${index}`);
-  } catch (err) {
-    logger.error(`An error occurred while creating the index ${index}:`);
-    logger.error(err);
-  }
-};
 /**
  * @function searchDocument
  * @param {*} query
@@ -53,55 +35,13 @@ const putMapping = option => {
 const getMapping = option => {
   return client.indices.getMapping(option);
 };
-/**
- * @function setProductsMapping,
- * @returns {void}
- * @description Sets the products mapping to the database.
- */
-const setProductsMapping = async () => {
-  try {
-    const schema = {
-      description: {
-        type: 'text',
-      },
-      name: {
-        type: 'text',
-      },
-      price: {
-        type: 'float',
-      },
-      in_stock: {
-        type: 'integer',
-      },
-      sold: {
-        type: 'float',
-      },
-      is_active: {
-        type: 'boolean',
-      },
-    };
 
-    await putMapping({
-      index: indexDefault,
-      type: typeDefault,
-      include_type_name: true,
-      body: {
-        properties: schema,
-      },
-    });
-
-    logger.info('Products mapping created successfully');
-  } catch (err) {
-    logger.info('An error occurred while setting the products mapping:');
-    logger.info(err);
-  }
-};
 /**
- * @function checkConnection
+ * @function connection
  * @returns {Promise<Boolean>}
  * @description Checks if the client is connected to ElasticSearch
  */
-const checkConnection = () => {
+const connection = () => {
   return new Promise(async resolve => {
     logger.info('Checking connection to ElasticSearch...');
     let isConnected = false;
@@ -117,25 +57,9 @@ const checkConnection = () => {
   });
 };
 
-const connect = async () => {
-  const isElasticReady = await checkConnection();
-
-  if (isElasticReady) {
-    const elasticIndex = await client.indices.exists({
-      index: indexDefault,
-    });
-
-    if (!elasticIndex.body) {
-      await createIndex(indexDefault);
-      await setProductsMapping();
-    }
-  }
-};
-
 module.exports = {
-  createIndex,
   searchDocument,
-  connect,
+  connection,
   getMapping,
   Client: client,
 };
