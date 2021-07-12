@@ -5,11 +5,16 @@ const data = require('../test/json/mic_vbpl.json');
 
 const bulkIndex = async () => {
   const bulk = [];
+  const check = {};
   for (const item of data) {
-    bulk.push(
-      { index: { _index: 'documents', _type: 'documents' } },
-      { ...item },
-    );
+    if (!check[item.id]) {
+      bulk.push(
+        { index: { _index: 'documents', _type: 'documents', _id: item.id } },
+        { ...item },
+      );
+
+      check[item.id] = true;
+    }
   }
 
   const result = await elasticsearch.Client.bulk({
@@ -56,7 +61,7 @@ const searchDocument = async ({ limit = 3, offsets = 0, inputText }) => {
   } = result;
 
   const total = hits.total.value;
-  const data = hits.hits.map(hit => {
+  const results = hits.hits.map(hit => {
     return {
       id: hit._id,
       _score: hit._score,
@@ -66,7 +71,7 @@ const searchDocument = async ({ limit = 3, offsets = 0, inputText }) => {
 
   return {
     total,
-    data,
+    data: results,
   };
 };
 

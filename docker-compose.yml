@@ -14,7 +14,7 @@ services:
       - ELASTICSEARCH_PASSWORD=12345678
     volumes:
       - .:/app
-      - /app/node_modules
+      - exclude:/app/node_modules
     links:
       - elasticsearch
     depends_on:
@@ -63,6 +63,8 @@ services:
 
 volumes:
   esdata:
+
+  exclude:
 
 networks:
   esnet:
