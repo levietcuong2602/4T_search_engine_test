@@ -75,4 +75,29 @@ const searchDocument = async ({ limit = 3, offsets = 0, inputText }) => {
   };
 };
 
-module.exports = { bulkIndex, getCount, searchDocument };
+const findDocumentById = async documentId => {
+  const docs = await elasticsearch.searchDocument({
+    from: 0,
+    size: 1,
+    index: 'documents',
+    body: {
+      query: {
+        term: {
+          _id: documentId,
+        },
+      },
+    },
+  });
+  const {
+    body: {
+      hits: { hits },
+    },
+  } = docs;
+  const [document] = hits;
+  if (document) {
+    return document._source;
+  }
+  return null;
+};
+
+module.exports = { bulkIndex, getCount, searchDocument, findDocumentById };

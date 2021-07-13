@@ -1,9 +1,12 @@
+/* eslint-disable import/no-extraneous-dependencies */
 const path = require('path');
 const fs = require('fs');
 const reader = require('any-text');
 
 const { logger } = require('../utils/logger');
 const elasticsearch = require('../utils/elasticsearch');
+const documentService = require('./document');
+const { doc } = require('prettier');
 
 const readFileDoc = async () => {
   try {
@@ -83,25 +86,67 @@ const importRuleData = async ({
   return result;
 };
 
-const splitText = text => {
+const splitText = ({ text, documentName, documentId, documentType }) => {
   return text
     .split(/<break_tag>|&lt;break_tag&gt;/)
     .filter(rule => /^(Điều|điều|\nĐiều|\nđiều)\s[0-9]+/gi.test(rule.trim()))
-    .map(rule => {
+    .map((rule, index) => {
       rule = rule.trim();
       const endRuleIndex = rule.indexOf('\n');
 
       return {
-        name: rule.substring(0, endRuleIndex).trim(),
+        id: `${documentId}_${index}`,
+        title: rule.substring(0, endRuleIndex).trim(),
         detail: rule.substring(endRuleIndex).trim(),
+        documentName,
+        documentId,
+        documentType,
       };
     });
 };
 
-const insertDocument = text => {
-  const result = splitText(text);
+const insertDocument = async ({ text, fileName }) => {
+  const regexFileName = /\[([a-zA-Z0-9. _\-,."“”()ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ]+)\]/giu;
+  const match = fileName.match(regexFileName);
+  if (match && match.length >= 3) {
+    const documentId = match[0]
+      .replace(/(\[|\])/gi, '')
+      .replace('TT.NHNN', 'TT-BTTTT')
+      .replace(/[._]/gi, '/')
+      .trim();
+    const documentName = match[1].replace(/(\[|\])/gi, '').trim();
+    const quantity = match[2].replace(/(\[|\])/gi, '').trim();
+    const document = await documentService.findDocumentById(documentId);
+    if (!document) {
+      logger.error(
+        `Insert file ${fileName} failure because not found document id = ${documentId}`,
+      );
+      return false;
+    }
 
-  return result;
+    const rules = splitText({
+      text,
+      documentName,
+      documentId,
+      documentType: document.type,
+    });
+
+    if (quantity - rules.length !== 0) {
+      logger.error(
+        `Insert file ${fileName} failure because wrong number rules: quantity=${quantity}, length=${
+          rules.length
+        }`,
+      );
+      return false;
+    }
+    return rules;
+  }
+
+  console.log({ match });
+  logger.error(
+    `Insert file ${fileName} failure because not extract info document`,
+  );
+  return false;
 };
 
 const autoloadRuleData = async () => {
@@ -111,12 +156,27 @@ const autoloadRuleData = async () => {
 
   const { length } = files;
   console.log(`Processing total ${length} file.`);
+  let countSuccess = 0;
   for (const fileName of files) {
+    console.log(`Process =================> ${fileName} starting ...`);
     const text = await reader.getText(
       path.join(__dirname, `../test/doc/${fileName}`),
     );
-    await insertDocument(text);
+    const isSuccess = await insertDocument({ text, fileName });
+    if (isSuccess) {
+      const currentPath = path.join(__dirname, `../test/doc/${fileName}`);
+      const newPath = path.join(__dirname, `../test/done/${fileName}`);
+      await fs.renameSync(currentPath, newPath);
+
+      console.log(`Process =================> ${fileName} successfull!`);
+      // eslint-disable-next-line no-plusplus
+      countSuccess++;
+    }
   }
+
+  console.log(
+    `Result =================> ${countSuccess} / ${length} successfull!`,
+  );
 };
 
 module.exports = { readFileDoc, importRuleData, autoloadRuleData };

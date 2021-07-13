@@ -36,7 +36,7 @@ const ruleSchema = {
         },
       },
     },
-    name: {
+    title: {
       type: 'text',
       fields: {
         keyword: {
