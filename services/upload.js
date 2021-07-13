@@ -84,8 +84,8 @@ const importRuleData = async ({
 };
 
 const splitText = text => {
-  const rules = text
-    .split('<break_tag>')
+  return text
+    .split(/<break_tag>|&lt;break_tag&gt;/)
     .filter(rule => /^(Điều|điều|\nĐiều|\nđiều)\s[0-9]+/gi.test(rule.trim()))
     .map(rule => {
       rule = rule.trim();
@@ -98,20 +98,25 @@ const splitText = text => {
     });
 };
 
-const loadRuleData = async () => {
-  const files = await fs.readdirSync('../test/data/');
+const insertDocument = text => {
+  const result = splitText(text);
+
+  return result;
+};
+
+const autoloadRuleData = async () => {
+  const files = await fs
+    .readdirSync(path.join(__dirname, '../test/doc/'))
+    .filter(fileName => ['doc', 'docx'].includes(fileName.split('.').pop()));
+
   const { length } = files;
-  const idx = 0;
-  fs.readdirSync('../test/data/').forEach(async fileName => {
-    if (fileName === 'index.js') return;
-    if (['js'].indexOf(fileName.split('.').pop()) === -1) return;
+  console.log(`Processing total ${length} file.`);
+  for (const fileName of files) {
     const text = await reader.getText(
       path.join(__dirname, `../test/doc/${fileName}`),
     );
-    const result = splitText(text);
-
-    console.log(result);
-  });
+    await insertDocument(text);
+  }
 };
 
-module.exports = { readFileDoc, importRuleData, loadRuleData };
+module.exports = { readFileDoc, importRuleData, autoloadRuleData };

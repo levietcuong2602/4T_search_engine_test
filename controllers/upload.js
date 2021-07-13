@@ -122,9 +122,9 @@ const readFileDoc = async (req, res) => {
   return res.send({ status: 1, result });
 };
 
-const loadRuleData = async (req, res) => {
-  const result = await uploadService.loadRuleData();
+const autoloadRuleData = async (req, res) => {
+  const result = await uploadService.autoloadRuleData();
   return res.send({ status: 1, result });
 };
 
-module.exports = { readFileDoc, uploadFile, loadRuleData };
+module.exports = { readFileDoc, uploadFile, autoloadRuleData };
