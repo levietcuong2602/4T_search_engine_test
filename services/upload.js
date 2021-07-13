@@ -6,7 +6,6 @@ const reader = require('any-text');
 const { logger } = require('../utils/logger');
 const elasticsearch = require('../utils/elasticsearch');
 const documentService = require('./document');
-const { doc } = require('prettier');
 
 const readFileDoc = async () => {
   try {
@@ -89,7 +88,11 @@ const importRuleData = async ({
 const splitText = ({ text, documentName, documentId, documentType }) => {
   return text
     .split(/<break_tag>|&lt;break_tag&gt;/)
-    .filter(rule => /^(Điều|điều|\nĐiều|\nđiều)\s[0-9]+/gi.test(rule.trim()))
+    .filter(rule =>
+      /^(Điều|điều|Điêu|điêu|\nĐiều|\nđiều|\nĐiêu|\nđiêu)\s[0-9]+/gi.test(
+        rule.trim(),
+      ),
+    )
     .map((rule, index) => {
       rule = rule.trim();
       const endRuleIndex = rule.indexOf('\n');
