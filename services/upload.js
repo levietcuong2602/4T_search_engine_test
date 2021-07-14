@@ -5,7 +5,9 @@ const reader = require('any-text');
 
 const { logger } = require('../utils/logger');
 const elasticsearch = require('../utils/elasticsearch');
+
 const documentService = require('./document');
+const ruleService = require('./rules');
 
 const readFileDoc = async () => {
   try {
@@ -142,7 +144,9 @@ const insertDocument = async ({ text, fileName }) => {
       );
       return false;
     }
-    return rules;
+
+    // eslint-disable-next-line no-return-await
+    return await ruleService.bulkIndex({ data: rules });
   }
 
   console.log({ match });

@@ -80,9 +80,27 @@ function detachSentences(characters) {
   return sentences;
 }
 
+async function writeFileJson({ data, filePath }) {
+  const jsonData = data.map(doc => {
+    if (doc['']) {
+      doc.summary += `. ${doc['']}`;
+      delete doc[''];
+    }
+
+    return doc;
+  });
+  try {
+    const stringData = JSON.stringify(jsonData, null, '\t');
+    await fs.writeFileSync(path.join(__dirname, filePath), stringData, 'utf-8');
+  } catch (err) {}
+
+  return true;
+}
+
 module.exports = {
   mkDirByPathSync,
   getFileExtension,
   download,
   detachSentences,
+  writeFileJson,
 };
