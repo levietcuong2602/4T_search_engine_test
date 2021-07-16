@@ -7,13 +7,18 @@ const { logger } = require('../utils/logger');
 const elasticsearch = require('../utils/elasticsearch');
 
 const documentService = require('./document');
-const ruleService = require('./rules');
+const ruleService = require('./rule');
 
 const readFileDoc = async () => {
   try {
-    const filePath = path.join(__dirname, '../test/doc/test.doc');
+    const files = await fs
+      .readdirSync(path.join(__dirname, '../test/doc/'))
+      .filter(fileName => ['doc', 'docx'].includes(fileName.split('.').pop()));
+
+    const { length } = files;
+    logger.info(`Processing total ${length} file.`);
   } catch (error) {
-    console.log(error.message);
+    logger.error(error.message);
   }
 };
 
@@ -22,47 +27,13 @@ const importRuleData = async ({
   document_id: documentId,
   document_name: documentName,
 }) => {
-  let download = [];
-  if (documentId) {
-    const docs = await elasticsearch.searchDocument({
-      from: 0,
-      size: 1,
-      index: 'documents',
-      body: {
-        query: {
-          term: {
-            _id: documentId,
-          },
-        },
-        _source: ['id', 'download'],
-      },
-    });
-    const {
-      body: {
-        hits: { hits },
-      },
-    } = docs;
-    const [document] = hits;
-    if (document) {
-      ({ download } = document._source);
-    }
+  const document = await documentService.findDocumentById(documentId);
+  if (!document) {
+    logger.error(`not found document id = ${documentId}`);
+    return false;
   }
 
-  const rules = text
-    .split('<break_tag>')
-    .filter(rule => /^(Điều|điều|\nĐiều|\nđiều)\s[0-9]+/gi.test(rule.trim()))
-    .map(rule => {
-      rule = rule.trim();
-      const endRuleIndex = rule.indexOf('\n');
-
-      return {
-        name: rule.substring(0, endRuleIndex).trim(),
-        detail: rule.substring(endRuleIndex).trim(),
-        documentId,
-        documentName,
-        download,
-      };
-    });
+  const rules = splitText({ text, documentName, documentId, documentType: '' });
 
   const bulk = [];
   for (const [index, rule] of rules.entries()) {
@@ -87,7 +58,13 @@ const importRuleData = async ({
   return result;
 };
 
-const splitText = ({ text, documentName, documentId, documentType }) => {
+const splitText = ({
+  text,
+  documentName,
+  documentId,
+  documentType,
+  download = [],
+}) => {
   return text
     .split(/<break_tag>|&lt;break_tag&gt;/)
     .filter(rule =>
@@ -101,11 +78,15 @@ const splitText = ({ text, documentName, documentId, documentType }) => {
 
       return {
         id: `${documentId}_${index}`,
-        title: rule.substring(0, endRuleIndex).trim(),
-        detail: rule.substring(endRuleIndex).trim(),
+        title:
+          endRuleIndex !== -1
+            ? rule.substring(0, endRuleIndex).trim()
+            : rule.substring(endRuleIndex).trim(),
+        detail: endRuleIndex !== -1 ? rule.substring(endRuleIndex).trim() : '',
         documentName,
         documentId,
         documentType,
+        download,
       };
     });
 };
@@ -134,6 +115,7 @@ const insertDocument = async ({ text, fileName }) => {
       documentName,
       documentId,
       documentType: document.type,
+      download: document.download,
     });
 
     if (quantity - rules.length !== 0) {
@@ -149,7 +131,7 @@ const insertDocument = async ({ text, fileName }) => {
     return await ruleService.bulkIndex({ data: rules });
   }
 
-  console.log({ match });
+  logger.info({ match });
   logger.error(
     `Insert file ${fileName} failure because not extract info document`,
   );
@@ -162,10 +144,10 @@ const autoloadRuleData = async () => {
     .filter(fileName => ['doc', 'docx'].includes(fileName.split('.').pop()));
 
   const { length } = files;
-  console.log(`Processing total ${length} file.`);
+  logger.info(`Processing total ${length} file.`);
   let countSuccess = 0;
   for (const fileName of files) {
-    console.log(`Process =================> ${fileName} starting ...`);
+    logger.info(`Process =================> ${fileName} starting ...`);
     const text = await reader.getText(
       path.join(__dirname, `../test/doc/${fileName}`),
     );
@@ -175,14 +157,14 @@ const autoloadRuleData = async () => {
       const newPath = path.join(__dirname, `../test/done/${fileName}`);
       await fs.renameSync(currentPath, newPath);
 
-      console.log(`Process =================> ${fileName} successfull!`);
+      logger.info(`Process =================> ${fileName} successfull!`);
       // eslint-disable-next-line no-plusplus
       countSuccess++;
     }
   }
 
-  console.log(
-    `Result =================> ${countSuccess} / ${length} successfull!`,
+  logger.info(
+    `\nResult =================> ${countSuccess} / ${length} successfull!\n`,
   );
 };
 

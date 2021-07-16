@@ -11,7 +11,7 @@ const getCount = async (req, res) => {
 };
 
 const searchDocument = async (req, res) => {
-  const result = await documentService.searchDocument(req.query);
+  const result = await documentService.searchAllDocument(req.query);
   return res.send({ status: 1, result });
 };
 

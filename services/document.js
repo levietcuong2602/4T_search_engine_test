@@ -1,12 +1,15 @@
 const elasticsearch = require('../utils/elasticsearch');
 const { logger } = require('../utils/logger');
 
-const data = require('../test/json/mic_vbpl.json');
+const { ROLE } = require('../constants/index');
+const ruleService = require('./rule');
+
+const jsonData = require('../test/json/mic_vbpl.json');
 
 const bulkIndex = async () => {
   const bulk = [];
   const check = {};
-  for (const item of data) {
+  for (const item of jsonData) {
     if (!check[item.id]) {
       bulk.push(
         { index: { _index: 'documents', _type: 'documents', _id: item.id } },
@@ -60,18 +63,27 @@ const searchDocument = async ({ limit = 3, offsets = 0, inputText }) => {
     body: { hits },
   } = result;
 
+  let isMatch = true;
   const total = hits.total.value;
-  const results = hits.hits.map(hit => {
+  const results = hits.hits.map((hit, index, array) => {
+    if (index > 0 && isMatch)
+      isMatch = array[index - 1]._score - hit._score <= 2;
+
     return {
       id: hit._id,
       _score: hit._score,
       ...hit._source,
+      isMatch,
     };
+  });
+
+  const data = results.filter(element => {
+    return element.isMatch;
   });
 
   return {
     total,
-    data: results,
+    data,
   };
 };
 
@@ -100,4 +112,42 @@ const findDocumentById = async documentId => {
   return null;
 };
 
-module.exports = { bulkIndex, getCount, searchDocument, findDocumentById };
+const searchAllDocument = async ({ inputText, role }) => {
+  const { total: totalRule, data: rules } = await ruleService.searchRules({
+    inputText,
+  });
+  const { total: totalDoc, data: documents } = await searchDocument({
+    inputText,
+  });
+
+  if (role === ROLE.RULES || totalRule === 0) {
+    return rules;
+  }
+  if (role === ROLE.DOCUMENTS || totalDoc === 0) {
+    return documents;
+  }
+
+  const ruleScoreAvg =
+    rules.reduce(
+      (accumulator, currentValue) => accumulator + currentValue._score,
+      0,
+    ) / rules.length;
+
+  const documentScoreAvg =
+    documents.reduce(
+      (accumulator, currentValue) => accumulator + currentValue._score,
+      0,
+    ) / documents.length;
+
+  return ruleScoreAvg > documentScoreAvg
+    ? { data: rules, role: ROLE.RULES }
+    : { data: documents, role: ROLE.DOCUMENTS };
+};
+
+module.exports = {
+  bulkIndex,
+  getCount,
+  searchDocument,
+  findDocumentById,
+  searchAllDocument,
+};
