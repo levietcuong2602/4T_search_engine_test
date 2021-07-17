@@ -10,8 +10,6 @@ services:
       - PORT=3000
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - ELASTICSEARCH_HOSTS=["http://elasticsearch:9200"]
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=12345678
     volumes:
       - .:/app
       - exclude:/app/node_modules

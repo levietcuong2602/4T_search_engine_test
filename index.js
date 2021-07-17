@@ -7,14 +7,12 @@ const morgan = require('morgan');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
-const multer = require('multer');
 const errorHandler = require('./middlewares/errorHandler');
 const camelcaseRequest = require('./middlewares/camelCaseRequest');
 const snakecaseResponse = require('./middlewares/snakeCaseResponse');
 
 require('dotenv').config();
 require('./utils/elasticsearch').connection();
-require('./models')(require('./utils/elasticsearch').Client);
 
 const app = express();
 
