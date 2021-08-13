@@ -15,11 +15,31 @@ const readFileDoc = async () => {
       .readdirSync(path.join(__dirname, '../test/doc/'))
       .filter(fileName => ['doc', 'docx'].includes(fileName.split('.').pop()));
 
-    const { length } = files;
-    logger.info(`Processing total ${length} file.`);
+    const results = [];
+    for (const fileName of files) {
+      const regex = new RegExp(/(_|_m_)/);
+      let name = fileName;
+      if (fileName.test(regex)) {
+        const { lastIndex } = regex;
+        name = fileName.substring(0, lastIndex);
+      }
+
+      name = name
+        .replace(/(\[|\])/gi, '')
+        .replace(/[._]/gi, '/')
+        .replace('ND', 'NĐ')
+        .replace('CD', 'CĐ')
+        .trim();
+
+      results.push(name);
+    }
+
+    return results;
   } catch (error) {
     logger.error(error.message);
   }
+
+  return [];
 };
 
 const importRuleData = async ({
@@ -168,4 +188,26 @@ const autoloadRuleData = async () => {
   );
 };
 
-module.exports = { readFileDoc, importRuleData, autoloadRuleData };
+const run = async () => {
+  // eslint-disable-next-line global-require
+  const jsonData = require('../public/json/mic_vbpl.json');
+  const bulk = [];
+  for (const item of jsonData) {
+    if (!item.uuid) {
+      bulk.push(
+        { index: { _index: 'documents', _type: 'documents', _id: item.uuid } },
+        { ...item },
+      );
+    }
+  }
+
+  const result = await elasticsearch.Client.bulk({
+    index: 'documents',
+    type: 'documents',
+    body: bulk,
+  });
+
+  return result;
+};
+
+module.exports = { readFileDoc, importRuleData, autoloadRuleData, run };

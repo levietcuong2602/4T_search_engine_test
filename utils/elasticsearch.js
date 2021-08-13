@@ -4,20 +4,23 @@ require('dotenv').config();
 
 const { ELASTICSEARCH_URL } = process.env;
 
-const client = new elasticsearch.Client({
-  node: ELASTICSEARCH_URL || 'http://localhost:9200',
-});
+const getClient = () => {
+  const client = new elasticsearch.Client({
+    node: ELASTICSEARCH_URL || 'http://localhost:9200',
+  });
+  return client;
+};
 /**
  * @function searchDocument
  * @param {*} query
  * @returns data document
  */
 const searchDocument = query => {
-  return client.search(query);
+  return getClient().search(query);
 };
 
 const getMapping = option => {
-  return client.indices.getMapping(option);
+  return getClient().indices.getMapping(option);
 };
 /**
  * @function connection
@@ -28,11 +31,10 @@ const connection = () => {
   return new Promise(async resolve => {
     logger.info('Checking connection to ElasticSearch...');
     try {
-      await client.cluster.health({});
+      await getClient().cluster.health({});
       logger.info('Successfully connected to ElasticSearch');
-      // eslint-disable-next-line no-empty
     } catch (_) {
-      logger.error('Successfully connected to ElasticSearch');
+      logger.error(`Connect to ElasticSearch failure because ${_.message}`);
     }
     resolve(true);
   });
@@ -42,5 +44,5 @@ module.exports = {
   searchDocument,
   connection,
   getMapping,
-  Client: client,
+  getClient,
 };

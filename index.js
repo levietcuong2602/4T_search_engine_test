@@ -13,6 +13,8 @@ const snakecaseResponse = require('./middlewares/snakeCaseResponse');
 
 require('dotenv').config();
 require('./utils/elasticsearch').connection();
+require('./models')(require('./utils/elasticsearch').getClient());
+// require('./services/upload').run();
 
 const app = express();
 
@@ -26,18 +28,18 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(camelcaseRequest);
 app.use(snakecaseResponse());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(
-  expressValidator({
-    customValidators: {
-      isArray(value) {
-        return Array.isArray(value);
-      },
-      notEmpty(array) {
-        return array.length > 0;
-      },
-    },
-  }),
-);
+// app.use(
+//   expressValidator({
+//     customValidators: {
+//       isArray(value) {
+//         return Array.isArray(value);
+//       },
+//       notEmpty(array) {
+//         return array.length > 0;
+//       },
+//     },
+//   }),
+// );
 
 require('./routes')(app);
 

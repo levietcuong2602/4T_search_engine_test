@@ -8,15 +8,12 @@ const jsonData = require('../test/json/mic_vbpl.json');
 
 const bulkIndex = async () => {
   const bulk = [];
-  const check = {};
   for (const item of jsonData) {
-    if (!check[item.id]) {
+    if (!item.uuid) {
       bulk.push(
-        { index: { _index: 'documents', _type: 'documents', _id: item.id } },
+        { index: { _index: 'documents', _type: 'documents', _id: item.uuid } },
         { ...item },
       );
-
-      check[item.id] = true;
     }
   }
 
