@@ -6,7 +6,7 @@ const { ELASTICSEARCH_URL } = process.env;
 
 const getClient = () => {
   const client = new elasticsearch.Client({
-    node: ELASTICSEARCH_URL || 'http://localhost:9200',
+    node: ELASTICSEARCH_URL || 'http://localhost:9201',
   });
   return client;
 };
